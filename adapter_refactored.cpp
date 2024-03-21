@@ -1,48 +1,56 @@
 #include <iostream>
 #include <memory>
 
-// Interface
-class DetergentInterface {
-public:
-    virtual double getDetergentAmount() = 0;
-    virtual ~DetergentInterface() = default;
-};
-
-// Concrete implementation
-class PowderDetergent : public DetergentInterface {
-public:
-    double getDetergentAmount() override {
-        return 50;
-    }
-};
-
-// Legacy component
 class LiquidDetergent {
 public:
-    double getLiquidDetergentAmount() {
+    virtual double getDetergentAmount() {
         return 30;
     }
 };
 
-// Adapter class
-class LiquidDetergentAdapter : public DetergentInterface {
+class PowderDetergent {
 public:
-    LiquidDetergentAdapter(std::unique_ptr<LiquidDetergent> liquidDetergent)
-        : m_liquidDetergent(std::move(liquidDetergent)) {}
+    double getDetergentAmountInGrams() {
+        return 50;
+    }
+};
 
-    double getDetergentAmount() override {
-        double liquidDetergentAmount = m_liquidDetergent->getLiquidDetergentAmount();
-        return liquidDetergentAmount * 1.67; // Convert liquid detergent amount to powder detergent amount
+// Adapter class to adapt PowderDetergent to LiquidDetergent interface
+class PowderDetergentAdapter : public LiquidDetergent {
+private:
+    PowderDetergent m_powderDetergent;
+
+public:
+    virtual double getDetergentAmount() override {
+        // Assuming 1 gram of powder detergent equals 1 milliliter of liquid detergent
+        return m_powderDetergent.getDetergentAmountInGrams();
+    }
+};
+
+class WashingMachine {
+public:
+    WashingMachine(std::unique_ptr<LiquidDetergent> detergent)
+        : m_detergent(std::move(detergent)) {}
+
+    void wash() {
+        double detergentAmount = m_detergent->getDetergentAmount();
+        std::cout << "Washing with " << detergentAmount << " milliliters of detergent." << std::endl;
     }
 
 private:
-    std::unique_ptr<LiquidDetergent> m_liquidDetergent;
+    std::unique_ptr<LiquidDetergent> m_detergent;
 };
 
 int main() {
+    // Using LiquidDetergent
     std::unique_ptr<LiquidDetergent> liquidDetergent = std::make_unique<LiquidDetergent>();
-    std::unique_ptr<DetergentInterface> di = std::make_unique<LiquidDetergentAdapter>(std::move(liquidDetergent));
-    std::cout << di->getDetergentAmount() << std::endl;
+    WashingMachine washingMachine(std::move(liquidDetergent));
+    washingMachine.wash();
+
+    // Using PowderDetergent via Adapter
+    std::unique_ptr<LiquidDetergent> powderAdapter = std::make_unique<PowderDetergentAdapter>();
+    WashingMachine washingMachine2(std::move(powderAdapter));
+    washingMachine2.wash();
 
     return 0;
 }
